@@ -1,0 +1,11 @@
+CityShop, ID, java.lang.Integer, True, IDIndex, B+tree 
+CityShop, Name, java.lang.String, False, null, null 
+CityShop, Number, java.lang.Integer, False, NumberIndex, B+tree 
+CityShop, Specialization, java.lang.String, False, SpecIndex, B+tree 
+CityShop, Address, java.lang.String, False, AddrIndex, B+tree 
+Student, id, java.lang.Integer, True, null, null
+Student, name, java.lang.String, False, null, null
+Student, gpa, java.lang.double, False, null, null
+Gogo, id, java.lang.Integer, True, null, null
+Gogo, gogo, java.lang.double, False, null, null
+Gogo, address, java.lang.String, False, null, null
