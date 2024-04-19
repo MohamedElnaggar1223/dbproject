@@ -80,9 +80,7 @@ public class Table {
     }
 
     public void insertTuple(Tuple tuple) throws DBAppException {
-        if(!initialized) {
-            initializeTable();
-        }
+        initializeTable();
         if(pages.size() == 0)
         {
             Page newPage = new Page(getTableName() + "/" + getTableName() + "1.ser", clusteringKeyColumn);
@@ -91,7 +89,10 @@ public class Table {
         }
         else
         {
-            Page foundPage = findAppropriatePage(tuple.getColumn(clusteringKeyColumn));
+            System.out.println("Before begin: " + pages.size());
+            Page foundPage = findAppropriatePage(tuple.getColumn(clusteringKeyColumn), this.pages);
+            System.out.println("before writing: " + foundPage.toString());
+            System.out.println("new tuple: " + tuple.toString());
             foundPage.addTuple(tuple);
             // Page lastPage = pages.get(pages.size()-1);
             // if(lastPage.isFull())
@@ -107,7 +108,8 @@ public class Table {
         }
     }
 
-    private Page findAppropriatePage(Object clusteringKeyValue) {
+    private Page findAppropriatePage(Object clusteringKeyValue, Vector<String> pages) {
+        System.out.println("inside func1: " + this.pages.size());
         Comparable clusteringKeyComparable = (Comparable) clusteringKeyValue;
 
         System.out.println(clusteringKeyValue);
@@ -119,23 +121,29 @@ public class Table {
             int mid = low + (high - low) / 2;
             String midPageName = pages.get(mid);
             Comparable minKey = (Comparable) readMinMaxValuesFromFile(midPageName).get("min");
-            System.out.println(minKey);
             Comparable maxKey = (Comparable) readMinMaxValuesFromFile(midPageName).get("max");
-            System.out.println(maxKey);
 
             if (clusteringKeyComparable.compareTo(minKey) >= 0 && clusteringKeyComparable.compareTo(maxKey) <= 0) {
-                return deserializePage(midPageName); // Found the appropriate page
+                System.out.println("Before deser1: " + this.pages.size());
+                return deserializePage(midPageName);
             } else if (clusteringKeyComparable.compareTo(maxKey) < 0) {
-                high = mid - 1; // Clustering key value is in the lower half
+                high = mid - 1;
             } else {
-                low = mid + 1; // Clustering key value is in the upper half
+                low = mid + 1;
             }
         }
 
-        return findClosestPage(clusteringKeyComparable);
+        return findClosestPage(clusteringKeyComparable, pages);
     }
 
-    private Page findClosestPage(Comparable clusteringKeyValue) {
+    private Page findClosestPage(Comparable clusteringKeyValue, Vector<String> pages) {
+        System.out.println("inside func2: " + this.pages.size());
+        if(pages.size() == 0)
+        {
+            Page newPage = new Page(getTableName() + "/" + getTableName() + (pages.size()+1)+".ser", clusteringKeyColumn);
+            this.pages.add(getTableName() + "/" + getTableName() + (pages.size()+1)+".ser");
+            return newPage;
+        }
         int left = 0;
         int right = pages.size() - 1;
         int closestPageIndex = -1;
@@ -144,11 +152,10 @@ public class Table {
             int mid = left + (right - left) / 2;
             String midPageName = pages.get(mid);
             Comparable minKey = (Comparable) readMinMaxValuesFromFile(midPageName).get("min");
-            System.out.println(minKey);
             Comparable maxKey = (Comparable) readMinMaxValuesFromFile(midPageName).get("max");
 
             if (minKey == null || maxKey == null) {
-                left = mid + 1; // Skip this page and continue binary search
+                left = mid + 1;
                 continue;
             }
 
@@ -156,6 +163,7 @@ public class Table {
             int maxCompare = clusteringKeyValue.compareTo(maxKey);
 
             if (minCompare >= 0 && maxCompare <= 0) {
+                System.out.println("Before deser2: " + this.pages.size());
                 return deserializePage(midPageName); // Found appropriate page
             } else if (minCompare < 0) {
                 right = mid - 1; // Go left
@@ -166,13 +174,28 @@ public class Table {
             }
         }
 
-        if(pages.size() == closestPageIndex) return deserializePage(pages.get(closestPageIndex - 1));
-        return deserializePage(pages.get(closestPageIndex));
+        if(pages.size() == closestPageIndex) {
+            System.out.println("Before deser3: " + this.pages.size());
+            Page foundPage = deserializePage(pages.get(closestPageIndex - 1));
+            Vector<String> filteredPages = pages;
+            filteredPages.remove(closestPageIndex - 1);
+            if(foundPage.isFull()) return findClosestPage(clusteringKeyValue, filteredPages);
+            else return foundPage;
+        }
+        else {
+            System.out.println("Before deser4: " + this.pages.size());
+            Page foundPage = deserializePage(pages.get(closestPageIndex));
+            Vector<String> filteredPages = pages;
+            filteredPages.remove(closestPageIndex);
+            if(foundPage.isFull()) return findClosestPage(clusteringKeyValue, filteredPages);
+            else return foundPage;
+        }
+
     }
 
     private Hashtable<String, Comparable> readMinMaxValuesFromFile(String filename) {
         Hashtable<String, Comparable> minMaxValues = new Hashtable<>();
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(filename.replace(".ser", "minmax.ser")))) {
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(filename.contains("/") ? filename.replace(".ser", "minmax.ser") : getTableName() + "/" + filename.replace(".ser", "minmax.ser")))) {
             minMaxValues = (Hashtable<String, Comparable>) ois.readObject();
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
@@ -206,6 +229,7 @@ public class Table {
 
     //Do not deserialize
     public void initializeTable() throws DBAppException {
+        pages.removeAll(pages);
         File tableFolder = new File(folderPath);
         if (tableFolder.exists() && tableFolder.isDirectory()) 
         {
@@ -278,9 +302,17 @@ public class Table {
 
     private Page deserializePage(String pageName) {
         Page page = null;
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(pageName))) {
-            page = (Page) ois.readObject();
-        } catch (IOException | ClassNotFoundException e) {
+        try
+        {
+            System.out.println("Before deserfinal: " + this.pages.size());
+            FileInputStream fileIn = new FileInputStream(pageName.contains("/") ? pageName : getTableName() + "/" + pageName);
+            ObjectInputStream in = new ObjectInputStream(fileIn);
+            page = (Page) in.readObject();
+            in.close();
+            fileIn.close();
+            return page;
+        }
+        catch(Exception e) {
             e.printStackTrace();
         }
         return page;

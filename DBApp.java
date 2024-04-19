@@ -253,33 +253,33 @@ public class DBApp {
 		// dbApp.createTable( strTableName, "id", htblColNameType );
 		// // dbApp.createIndex( strTableName, "gpa", "gpaIndex" );
 
-		Hashtable htblColNameValue = new Hashtable( );
-		htblColNameValue.put("id", new Integer( 0 ));
-		htblColNameValue.put("address", new String("Test test address" ) );
-		htblColNameValue.put("gogo", new String("testttttt" ) );
-		dbApp.insertIntoTable( strTableName , htblColNameValue );
+		// Hashtable htblColNameValue = new Hashtable( );
+		// htblColNameValue.put("id", new Integer( 0 ));
+		// htblColNameValue.put("address", new String("Test test address" ) );
+		// htblColNameValue.put("gogo", new String("testttttt" ) );
+		// dbApp.insertIntoTable( strTableName , htblColNameValue );
 
-		Hashtable newme = new Hashtable();
+		// Hashtable newme = new Hashtable();
 
-		newme.put("id",new Integer(1));
-		newme.put("address", new String("This is my address"));
-		newme.put("gogo", "gogovalue");
+		// newme.put("id",new Integer(1));
+		// newme.put("address", new String("This is my address"));
+		// newme.put("gogo", "gogovalue");
 
-		dbApp.insertIntoTable(strTableName, newme);
+		// dbApp.insertIntoTable(strTableName, newme);
 
-		Hashtable newme2 = new Hashtable();
+		// Hashtable newme2 = new Hashtable();
 
-		newme2.put("id",new Integer(2));
-		newme2.put("address", new String("This is my address"));
-		newme2.put("gogo", "gogovalue");
+		// newme2.put("id",new Integer(2));
+		// newme2.put("address", new String("This is my address"));
+		// newme2.put("gogo", "gogovalue");
 		
-		dbApp.insertIntoTable(strTableName, newme2);
+		// dbApp.insertIntoTable(strTableName, newme2);
 
-		Hashtable newval = new Hashtable();
+		// Hashtable newval = new Hashtable();
 
-		newval.put("id", new Integer(208));
-		newval.put("address", new String("naggars Address"));
-		newval.put("gogo", new String("what is gogo"));
+		// newval.put("id", new Integer(208));
+		// newval.put("address", new String("naggars Address"));
+		// newval.put("gogo", new String("what is gogo"));
 
 
 		
@@ -289,7 +289,7 @@ public class DBApp {
 		//insertion into gogo table 	
 			
 
-		for(int k = 1 ; k<205;k++){
+		for(int k = 1 ; k<250;k++){
 			Hashtable newhash = new Hashtable();
 
 			newhash.put("id", new Integer(k+3));
@@ -312,7 +312,18 @@ public class DBApp {
 			dbApp.insertIntoTable("Student", newhash);
 		}
 
-		dbApp.insertIntoTable(strTableName, newval);
+		// dbApp.insertIntoTable(strTableName, newval);
+
+		dbApp.tables.forEach(table -> {
+			try
+			{
+				table.displayTableData();
+			}
+			catch(Exception e)
+			{
+
+			}
+		});
 
 		//new values for gogo table
 

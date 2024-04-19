@@ -20,6 +20,7 @@ public class Page implements java.io.Serializable {
     }
 
     public void addTuple(Tuple tuple) {
+        System.out.println("page's data before insertion: " + this.toString());
         tuples.add(tuple);
         updateMinMax(tuple);
         saveToFile();
@@ -45,22 +46,22 @@ public class Page implements java.io.Serializable {
 
     private void saveToFile() {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filename))) {
-            oos.writeObject(this);
+            oos.writeObject(this); 
             System.out.println("Page saved to file: " + filename);
+            String modifiedFilename =  new String(filename).replace(".ser", "minmax.ser");
+    
+            try (ObjectOutputStream oos2 = new ObjectOutputStream(new FileOutputStream(modifiedFilename))) {
+                Hashtable<String, Comparable> minMaxObj = new Hashtable<>();
+                minMaxObj.put("min", minValue);
+                minMaxObj.put("max", maxValue);
+                oos2.writeObject(minMaxObj);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        String modifiedFilename =  new String(filename).replace(".ser", "minmax.ser");
-
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(modifiedFilename))) {
-            Hashtable<String, Comparable> minMaxObj = new Hashtable<>();
-            minMaxObj.put("min", minValue);
-            minMaxObj.put("max", maxValue);
-            oos.writeObject(minMaxObj);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     public boolean isFull()
