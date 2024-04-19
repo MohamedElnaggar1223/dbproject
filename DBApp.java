@@ -289,10 +289,22 @@ public class DBApp {
 		//insertion into gogo table 	
 			
 
-		for(int k = 1 ; k<250;k++){
+		for(int k = 1 ; k<201;k++){
+			// if(k == 60) continue;
 			Hashtable newhash = new Hashtable();
 
-			newhash.put("id", new Integer(k+3));
+			newhash.put("id", new Integer(k));
+			newhash.put("address", new String("Yassin Foudas Address"));
+			newhash.put("gogo", new String("what is gogo"));
+
+			dbApp.insertIntoTable(strTableName, newhash);
+
+		}
+		for(int k = 201 ; k<401;k++){
+			// if(k == 60) continue;
+			Hashtable newhash = new Hashtable();
+
+			newhash.put("id", new Integer(k));
 			newhash.put("address", new String("Yassin Foudas Address"));
 			newhash.put("gogo", new String("what is gogo"));
 
@@ -302,18 +314,38 @@ public class DBApp {
 
 		//insertion into Student table	
 
-		for (int k = 0; k < 205; k++) {
-			Hashtable newhash = new Hashtable();
+		// for (int k = 0; k < 205; k++) {
+		// 	Hashtable newhash = new Hashtable();
 
-			newhash.put("id", new Integer(k + 3));
-			newhash.put("name", new String("Yassin Mohamed Fouda"));
-			newhash.put("gpa", new Double(1.88));
+		// 	newhash.put("id", new Integer(k + 3));
+		// 	newhash.put("name", new String("Yassin Mohamed Fouda"));
+		// 	newhash.put("gpa", new Double(1.88));
 
-			dbApp.insertIntoTable("Student", newhash);
-		}
+		// 	dbApp.insertIntoTable("Student", newhash);
+		// }
 
 		// dbApp.insertIntoTable(strTableName, newval);
+		System.out.println("First Print: \n");
+		dbApp.tables.forEach(table -> {
+			try
+			{
+				table.displayTableData();
+			}
+			catch(Exception e)
+			{
 
+			}
+		});
+
+		Hashtable newhash = new Hashtable();
+
+		newhash.put("id", new Integer(60));
+		newhash.put("address", new String("Yassin Foudas Address"));
+		newhash.put("gogo", new String("what is gogo????????"));
+
+		dbApp.insertIntoTable(strTableName, newhash);
+
+		System.out.println("Second Print: \n");
 		dbApp.tables.forEach(table -> {
 			try
 			{

@@ -11,7 +11,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Vector;
 
-public class Table {
+public class Table implements java.io.Serializable {
     private String tableName;
     private String clusteringKeyColumn;
     private Hashtable<String,String> columnTypes;
@@ -89,11 +89,11 @@ public class Table {
         }
         else
         {
-            System.out.println("Before begin: " + pages.size());
             Page foundPage = findAppropriatePage(tuple.getColumn(clusteringKeyColumn), this.pages);
-            System.out.println("before writing: " + foundPage.toString());
-            System.out.println("new tuple: " + tuple.toString());
-            foundPage.addTuple(tuple);
+            // foundPage.addTuple(tuple);
+            insertTupleIntoPage(foundPage, tuple);
+
+
             // Page lastPage = pages.get(pages.size()-1);
             // if(lastPage.isFull())
             // {
@@ -109,10 +109,14 @@ public class Table {
     }
 
     private Page findAppropriatePage(Object clusteringKeyValue, Vector<String> pages) {
-        System.out.println("inside func1: " + this.pages.size());
-        Comparable clusteringKeyComparable = (Comparable) clusteringKeyValue;
+        if(pages.size() == 0)
+        {
+            Page newPage = new Page(getTableName() + "/" + getTableName() + (this.pages.size()+1)+".ser", clusteringKeyColumn);
+            this.pages.add(getTableName() + "/" + getTableName() + (this.pages.size()+1)+".ser");
+            return newPage;
+        }
 
-        System.out.println(clusteringKeyValue);
+        Comparable clusteringKeyComparable = (Comparable) clusteringKeyValue;
 
         int low = 0;
         int high = pages.size() - 1;
@@ -124,8 +128,11 @@ public class Table {
             Comparable maxKey = (Comparable) readMinMaxValuesFromFile(midPageName).get("max");
 
             if (clusteringKeyComparable.compareTo(minKey) >= 0 && clusteringKeyComparable.compareTo(maxKey) <= 0) {
-                System.out.println("Before deser1: " + this.pages.size());
-                return deserializePage(midPageName);
+                Page foundPage = deserializePage(midPageName);
+                Vector<String> filteredPages = (Vector<String>) pages.clone();
+                filteredPages.remove(midPageName);
+                if(foundPage.isFull()) return findAppropriatePage(clusteringKeyValue, filteredPages);
+                else return foundPage;
             } else if (clusteringKeyComparable.compareTo(maxKey) < 0) {
                 high = mid - 1;
             } else {
@@ -137,11 +144,10 @@ public class Table {
     }
 
     private Page findClosestPage(Comparable clusteringKeyValue, Vector<String> pages) {
-        System.out.println("inside func2: " + this.pages.size());
         if(pages.size() == 0)
         {
-            Page newPage = new Page(getTableName() + "/" + getTableName() + (pages.size()+1)+".ser", clusteringKeyColumn);
-            this.pages.add(getTableName() + "/" + getTableName() + (pages.size()+1)+".ser");
+            Page newPage = new Page(getTableName() + "/" + getTableName() + (this.pages.size()+1)+".ser", clusteringKeyColumn);
+            this.pages.add(getTableName() + "/" + getTableName() + (this.pages.size()+1)+".ser");
             return newPage;
         }
         int left = 0;
@@ -163,8 +169,8 @@ public class Table {
             int maxCompare = clusteringKeyValue.compareTo(maxKey);
 
             if (minCompare >= 0 && maxCompare <= 0) {
-                System.out.println("Before deser2: " + this.pages.size());
-                return deserializePage(midPageName); // Found appropriate page
+                Page foundPage = deserializePage(midPageName);
+                return foundPage;
             } else if (minCompare < 0) {
                 right = mid - 1; // Go left
                 closestPageIndex = mid; // Update closest page index
@@ -175,17 +181,15 @@ public class Table {
         }
 
         if(pages.size() == closestPageIndex) {
-            System.out.println("Before deser3: " + this.pages.size());
             Page foundPage = deserializePage(pages.get(closestPageIndex - 1));
-            Vector<String> filteredPages = pages;
+            Vector<String> filteredPages = (Vector<String>) pages.clone();
             filteredPages.remove(closestPageIndex - 1);
             if(foundPage.isFull()) return findClosestPage(clusteringKeyValue, filteredPages);
             else return foundPage;
         }
         else {
-            System.out.println("Before deser4: " + this.pages.size());
             Page foundPage = deserializePage(pages.get(closestPageIndex));
-            Vector<String> filteredPages = pages;
+            Vector<String> filteredPages = (Vector<String>) pages.clone();
             filteredPages.remove(closestPageIndex);
             if(foundPage.isFull()) return findClosestPage(clusteringKeyValue, filteredPages);
             else return foundPage;
@@ -277,7 +281,7 @@ public class Table {
             for (File file : listOfFiles) {
                 if (file.isFile() && file.getName().endsWith(".ser") && !file.getName().contains("minmax")) {
                     Page page = deserializePage(file);
-                    System.out.println(page.toString());
+                    System.out.println(page.getPageFileName() + page.toString());
                 }
             }
         }
@@ -304,7 +308,6 @@ public class Table {
         Page page = null;
         try
         {
-            System.out.println("Before deserfinal: " + this.pages.size());
             FileInputStream fileIn = new FileInputStream(pageName.contains("/") ? pageName : getTableName() + "/" + pageName);
             ObjectInputStream in = new ObjectInputStream(fileIn);
             page = (Page) in.readObject();
@@ -317,4 +320,63 @@ public class Table {
         }
         return page;
     }
+
+    public void insertTupleIntoPage(Page page, Tuple tuple) {
+        if (page.getTuples().isEmpty()) {
+          page.getTuples().add(tuple);
+          page.updatePage(tuple);
+          return;
+        }
+      
+        String clusterKey = this.getClusteringKeyColumn();
+        Comparable keyValue = (Comparable) tuple.getData().get(clusterKey);
+
+        if((int)keyValue == 61) {
+            page.getTuples().remove(59);
+            page.updatePage(tuple);
+        }
+      
+        // Use long to prevent overflow
+        long low = 0;
+        long high = page.getTuples().size() - 1;
+      
+        while (low <= high) {
+          long mid = (low + high) >>> 1; // Avoid overflow with unsigned right shift
+          Tuple midTuple = page.getTuples().get((int) mid); // Cast mid to int for access
+          Comparable midKeyValue = (Comparable) midTuple.getData().get(clusterKey);
+      
+          int comparison = keyValue.compareTo(midKeyValue);
+          if (comparison < 0) {
+            high = mid - 1;
+          } else if (comparison > 0) {
+            low = mid + 1;
+          } else {
+            // Duplicate key, handle as needed
+            System.out.println("Duplicate key found: " + keyValue);
+            return;
+          }
+        }
+      
+        // Insertion position not at the end
+        if (low < page.getTuples().size()) {
+          page.getTuples().add(page.getTuples().size(), null); // Add placeholder
+          for (int i = page.getTuples().size() - 1; i > low; i--) {
+            page.getTuples().set(i, page.getTuples().get(i - 1));
+          }
+        }
+      
+        // Insert the tuple at the found position
+        try
+        {
+            page.getTuples().set((int) low, tuple);
+        }
+        catch(Exception e)
+        {
+            page.getTuples().add((int) low, tuple);
+        }
+        finally
+        {
+            page.updatePage(tuple);
+        }
+      }
 }

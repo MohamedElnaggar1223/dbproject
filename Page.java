@@ -26,6 +26,10 @@ public class Page implements java.io.Serializable {
         saveToFile();
     }
 
+    public void setTuples(Vector<Tuple> tuples) {
+        this.tuples = tuples;
+    }
+
     public String getPageFileName() {
         return this.filename;
     }
@@ -62,6 +66,12 @@ public class Page implements java.io.Serializable {
             e.printStackTrace();
         }
 
+    }
+
+    public void updatePage(Tuple tuple)
+    {
+        this.updateMinMax(tuple);
+        this.saveToFile();
     }
 
     public boolean isFull()
